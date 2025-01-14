@@ -10,12 +10,13 @@ const VoiceInput = () => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const textareaRef = useRef(null); // Referência para o textarea
+  const isManuallyStopped = useRef(false); // Referência para rastrear se o usuário parou
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recog = new SpeechRecognition();
-      recog.continuous = false;
+      recog.continuous = true; // Permitir reconhecimento contínuo
       recog.interimResults = false;
       recog.lang = 'pt-BR';
 
@@ -25,9 +26,9 @@ const VoiceInput = () => {
       };
 
       recog.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+        const transcript = event.results[event.results.length - 1][0].transcript;
         console.log('Texto transcrito:', transcript);
-        setTexto(transcript);
+        setTexto((prevText) => (prevText ? `${prevText} ${transcript}` : transcript));
       };
 
       recog.onerror = (event) => {
@@ -37,11 +38,10 @@ const VoiceInput = () => {
       recog.onend = () => {
         console.log('Reconhecimento de voz finalizado');
         setIsListening(false);
-        // Removido o envio aqui
-
-        // Testando adicionar o trigger do envio aqui
-        if (mediaRecorderRef.current) {
-          mediaRecorderRef.current.stop();
+        if (!isManuallyStopped.current) {
+          // Reiniciar reconhecimento se não foi parado manualmente
+          console.log('Reiniciando reconhecimento de voz...');
+          recog.start();
         }
       };
 
@@ -49,7 +49,14 @@ const VoiceInput = () => {
     } else {
       alert('Seu navegador não suporta a API de Reconhecimento de Voz.');
     }
-  }, []);
+
+    // Limpeza ao desmontar o componente
+    return () => {
+      if (recognition) {
+        recognition.stop();
+      }
+    };
+  }, []); // Executar apenas uma vez ao montar
 
   useEffect(() => {
     // Auto-resize do textarea sempre que o texto muda
@@ -63,6 +70,7 @@ const VoiceInput = () => {
     if (recognition) {
       if (isListening) {
         console.log('Parando o reconhecimento de voz e a gravação');
+        isManuallyStopped.current = true; // Indicar que a parada foi manual
         recognition.stop();
         if (mediaRecorderRef.current) {
           mediaRecorderRef.current.stop();
@@ -76,6 +84,7 @@ const VoiceInput = () => {
           const mediaRecorder = new MediaRecorder(stream);
           mediaRecorderRef.current = mediaRecorder;
           audioChunksRef.current = []; // Garantir que está vazio antes de iniciar
+          isManuallyStopped.current = false; // Resetar a flag de parada manual
 
           mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
@@ -179,43 +188,3 @@ const styles = {
 };
 
 export default VoiceInput;
-
-
-/*
-Explicação do Código
-Importações:
-useState e useEffect do React para gerenciar estados e efeitos colaterais.
-Ícones de microfone da biblioteca react-icons.
-Estados:
-texto: Armazena o texto transcrito.
-isListening: Indica se o reconhecimento de voz está ativo.
-recognition: Instância do reconhecimento de voz.
-useEffect:
-Verifica se a API de Reconhecimento de Voz é suportada pelo navegador.
-Configura as propriedades e os eventos do reconhecimento de voz.
-Atualiza os estados com base nos eventos (início, resultado, erro, fim).
-handleMicClick:
-Inicia ou para o reconhecimento de voz com base no estado atual (isListening).
-Renderização:
-Campo de texto para exibir o texto transcrito.
-Botão com ícone que alterna entre os estados de "ouvindo" e "parado".
-*/
-
-/*
-Importações Adicionais:
-useRef do React para manter referências persistentes entre renderizações.
-axios para realizar requisições HTTP.
-ARMAZENAR ÁUDIO:
-mediaRecorderRef e audioChunksRef: Utilizados para armazenar a instância do MediaRecorder e os pedaços de áudio gravados, respectivamente.
-FUNCIONAMENTO:
-Quando o usuário clica no ícone do microfone, o aplicativo:
-Solicita permissão para acessar o microfone.
-Inicia a gravação de áudio usando MediaRecorder.
-Inicia o reconhecimento de voz usando a Web Speech API.
-Quando a gravação ou o reconhecimento de voz são interrompidos:
-Para a gravação.
-Envia o áudio gravado para o backend.
-FUNÇÃO enviarAudio:
-Cria um objeto FormData contendo o blob de áudio.
-Envia o áudio para o endpoint /upload do backend usando axios.
-*/
