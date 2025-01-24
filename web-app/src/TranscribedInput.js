@@ -1,7 +1,7 @@
 // src/VoiceInput.js
 import React, {useEffect, useRef} from 'react';
 
-const VoiceInput = ({transcribedText}) => {
+const TranscribedInput = ({transcribedText}) => {
     const textareaRef = useRef(null); // Referência para o textarea
 
     useEffect(() => {
@@ -49,4 +49,4 @@ const styles = {
     }
 };
 
-export default VoiceInput;
+export default TranscribedInput;
