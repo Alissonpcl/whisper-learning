@@ -6,3 +6,7 @@ venv
 temp_uploads
 uploads_mp3
 node_modules
+
+# Files where its names starts with
+# the words below can't be tracked
+restricted*
